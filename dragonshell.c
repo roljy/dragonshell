@@ -19,16 +19,20 @@ const size_t MAX_BG_PROC = 1; // num of background processes
  * @param delim C string containing delimiter character(s)
  * @param argv char* array that will contain the tokenized strings.
  *             Make sure that you allocate enough space for the array.
+ * 
+ * @return Number of split-up tokens
  */
-void tokenize(char *str, const char *delim, char **argv)
+size_t tokenize(char *str, const char *delim, char **argv)
 {
     char *token;
     token = strtok(str, delim);
-    for (size_t i = 0; token != NULL; ++i)
+    size_t i;
+    for (i = 0; token != NULL; ++i)
     {
         argv[i] = token;
         token = strtok(NULL, delim);
     }
+    return i;
 }
 
 
@@ -42,6 +46,20 @@ void display_prompt(char *buffer)
     printf("dragonshell > ");
     fgets(buffer, LINE_LENGTH, stdin);
     buffer[strcspn(buffer, "\n")] = '\0';
+}
+
+
+/**
+ * @brief Central master function to handle all requests,
+ *        delegating to subroutines as necessary.
+ * @param argc Number of input arguments (tokens)
+ * @param argv char* array containing input arguments
+ */
+void handle_request(int argc, char **argv)
+{
+    if (argc == 0)
+        return;
+    printf("%s\n", argv[0]);
 }
 
 
@@ -63,14 +81,11 @@ int main(int argc, char *argv[])
     display_prompt(buffer);
 
     // split the user-provided command into tokens for parsing
-    char **args = malloc(MAX_ARGS * sizeof(char *));
-    tokenize(buffer, " ", args);
-    printf("You typed: \n");
-    for (size_t i = 0; i < 3; i++)
-    {
-        printf("%s\n", args[i]);
-    }
-    free(args);
+    char *args[MAX_ARGS * 3];  // x3 for safety, in case of multi-command
+    size_t args_cnt = tokenize(buffer, " ", args);
+
+    // handle the arguments accordingly
+    handle_request(args_cnt, args);
 
     return 0;
 }
