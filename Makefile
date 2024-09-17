@@ -8,9 +8,10 @@ dragonshell: compile
 compile: dragonshell.o
 
 clean:
-	rm *.o dragonshell dsh_debug
+	rm -f *.o dragonshell dsh_debug
 
-valgrind: dsh_debug
+valgrind:
+	make dsh_debug
 	valgrind --tool=memcheck --leak-check=yes ./dsh_debug
 
 dsh_debug:
