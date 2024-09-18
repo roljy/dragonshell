@@ -6,7 +6,9 @@
 #include <stdio.h>      // printf
 #include <stdlib.h>     // free
 #include <stdbool.h>    // true/false
-#include <unistd.h>     // chdir
+#include <unistd.h>     // chdir, getcwd, _exit, fork, execve
+#include <sys/types.h>  // pid_t
+#include <sys/wait.h>   // wait
 
 // user includes
 #include "constants.h"
@@ -44,6 +46,41 @@ void print_working_dir()
 
 
 /**
+ * @brief Execute an external program as its own process and wait for it
+ *        to finish before returning control to shell.
+ * 
+ * @param argc Number of command-line arguments
+ * @param argv Array of strings containing args (start with program filepath)
+ */
+void exec_external_cmd(int argc, char **argv)
+{
+    if (argc <= 0)
+        perror("Not enough arguments for exec");
+    pid_t pid = fork();  // create child
+    if (pid == 0)
+    {
+        // child continues here
+        char *envp[1] = { NULL };
+        // can pass argv directly since argv[0] is expected to be the filename
+        execve(argv[0], argv, envp);
+        // execve returning means it failed. assume unknown command
+        log_error_msg(EC_UNKNOWN_CMD);
+        _exit(1);
+    }
+    else if (pid > 0)
+    {
+        // parent continues here
+        wait(NULL);  // wait for child to finish
+    }
+    else
+    {
+        // pid < 0
+        perror("fork() failed");
+    }
+}
+
+
+/**
  * @brief Central master function to handle all requests,
  *        delegating to subroutines as necessary.
  * @param argc Number of input arguments (tokens)
@@ -72,6 +109,11 @@ void handle_request(int argc, char **argv)
         // TODO gracefully exit
         keep_shell_alive = false;
     }
+
+    else  // assume external command
+    {
+        exec_external_cmd(argc, argv);
+    }
 }
 
 
@@ -95,7 +137,7 @@ int main(int argc, char *argv[])
         display_prompt(buffer);
 
         // split the user-provided command into tokens for parsing
-        char *args[MAX_ARGS * 3];  // x3 for safety, in case of multi-command
+        char *args[MAX_ARGS * 3] = { NULL };  // x3 for safety
         size_t args_cnt = tokenize(buffer, " ", args);
 
         // handle the arguments accordingly
