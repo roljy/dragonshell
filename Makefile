@@ -1,11 +1,12 @@
 CC = gcc
-CFLAGS = -Wall
+CFLAGS = -Wall -std=c11
+DBFLAGS = -O0 -g
 
-dragonshell: compile
-	$(CC) $(CFLAGS) -o dragonshell dragonshell.o
+dragonshell: dragonshell.o shellio.o
+	$(CC) $(CFLAGS) $^ -o dragonshell
 
 # leverage make's implicit recipe for object files
-compile: dragonshell.o
+compile: dragonshell.o shellio.o
 
 clean:
 	rm -f *.o dragonshell dsh_debug
@@ -13,8 +14,8 @@ clean:
 valgrind: dsh_debug
 	valgrind --tool=memcheck --leak-check=yes ./dsh_debug
 
-dsh_debug: db_dragonshell.o
-	$(CC) $(CFLAGS) -O0 -g -o $@ $^
+dsh_debug: db_dragonshell.o db_shellio.o
+	$(CC) $(CFLAGS) $(DBFLAGS) $^ -o $@
 
-db_dragonshell.o: dragonshell.c
-	$(CC) $(CFLAGS) -O0 -g -c -o $@ dragonshell.c
+db_%.o: %.c
+	$(CC) $(CFLAGS) $(DBFLAGS) -c $^ -o $@
