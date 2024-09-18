@@ -4,6 +4,7 @@
 // C includes
 #include <string.h>     // strcmp
 #include <stdio.h>      // printf
+#include <stdlib.h>     // free
 #include <stdbool.h>    // true/false
 #include <unistd.h>     // chdir
 
@@ -30,6 +31,19 @@ void change_dir(const char *target)
 
 
 /**
+ * @brief Print the current working directory
+ */
+void print_working_dir()
+{
+    // specifying NULL for buf ensures wd is adequately sized
+    char *wd = getcwd(NULL, 0);
+    printf("%s\n", wd);
+    // since getcwd used malloc to allocate for wd, must free manually
+    free(wd);
+}
+
+
+/**
  * @brief Central master function to handle all requests,
  *        delegating to subroutines as necessary.
  * @param argc Number of input arguments (tokens)
@@ -46,6 +60,11 @@ void handle_request(int argc, char **argv)
             log_error_msg(EC_CD_NO_ARGS);
         else
             change_dir(argv[1]);  // only needs argv[1]; ignore any after
+    }
+
+    else if (strcmp(argv[0], "pwd") == 0)
+    {
+        print_working_dir();  // no need for any other args
     }
 
     else if (strcmp(argv[0], "exit") == 0)
