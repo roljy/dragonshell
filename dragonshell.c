@@ -12,8 +12,43 @@ const size_t MAX_ARGS = 5;  // num of args per command
 const size_t MAX_LENGTH = 20;  // num of characters per arg
 const size_t MAX_BG_PROC = 1; // num of background processes
 
+typedef enum
+{
+    EC_SUCCESS,
+    EC_CD_NO_ARGS,
+    EC_CD_PATH_NOT_FOUND,
+    EC_UNKNOWN_CMD,
+} ErrCode;
+
 // global vars
 bool keep_shell_alive = true;
+
+
+/**
+ * @brief Display a descriptive error message given a corresponding code
+ * 
+ * @param rc Code for the error raised
+ */
+void handle_error(ErrCode rc)
+{
+    switch (rc)
+    {
+    case EC_SUCCESS:
+        return;
+    case EC_CD_NO_ARGS:
+        printf("dragonshell: Expected argument to \"cd\"\n");
+        break;
+    case EC_CD_PATH_NOT_FOUND:
+        printf("dragonshell: No such file or directory\n");
+        break;
+    case EC_UNKNOWN_CMD:
+        printf("dragonshell: Command not found\n");
+        break;
+    default:
+        printf("dragonshell: Unknown error code!\n");
+        printf("Ensure all errors have been added to enum ErrCode.\n");
+    }
+}
 
 
 /**
@@ -54,13 +89,16 @@ void display_prompt(char *buffer)
 
 
 /**
- * @brief Log an error message
+ * @brief Change the current working directory
  * 
- * @param msg Explanation of the error that occurred
+ * @param target Absolute or relative path of target dir
  */
-void log_error(char *msg)
+void change_dir(const char *target)
 {
-    printf("dragonshell: %s\n", msg);
+    int rc = chdir(target);
+    if (rc != 0)
+        handle_error(EC_CD_PATH_NOT_FOUND);
+        // no need to do anything if rc == 0; cd was successful
 }
 
 
@@ -78,15 +116,9 @@ void handle_request(int argc, char **argv)
     if (strcmp(argv[0], "cd") == 0)
     {
         if (argc < 2)
-        {
-            log_error("Expected argument to \"cd\"");
-            return;
-        }
-        // cd only needs argv[1], can ignore anything that follows
-        if (chdir(argv[1]) != 0)
-        {
-            log_error("No such file or directory");
-        }
+            handle_error(EC_CD_NO_ARGS);
+        else
+            change_dir(argv[1]);  // only needs argv[1]; ignore any after
     }
 
     else if (strcmp(argv[0], "exit") == 0)
