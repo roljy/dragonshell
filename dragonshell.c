@@ -43,7 +43,14 @@ void handle_request(int argc, char **argv)
 
     else  // assume external command
     {
-        exec_external_cmd(argc, argv);
+        int is_bg_proc = (argc >= 2 && strcmp(argv[argc-1], "&") == 0);
+        if (is_bg_proc)
+        {
+            // need to set the final "&" to a NULL if it exists
+            argv[--argc] = NULL;
+        }
+
+        exec_external_cmd(argc, argv, is_bg_proc, NULL, NULL);
     }
 }
 

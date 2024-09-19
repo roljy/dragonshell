@@ -36,13 +36,18 @@ void exit_shell();
 
 /**
  * @brief Execute an external program as its own process.
- *        If argv ends with "&", send it to background,
- *        otherwise wait for it to finish before returning control to shell.
  * 
  * @param argc Number of command-line arguments
  * @param argv Array of strings containing args (start with program filepath)
+ * @param is_bg_proc True if process should run in background, False otherwise
+ * @param infile Filepath of input file, or NULL for stdin
+ * @param outfile Filepath of output file, or NULL for stdout
  */
-void exec_external_cmd(int argc, char **argv);
+void exec_external_cmd(int argc,
+                       char **argv,
+                       int is_bg_proc,
+                       char *infile,
+                       char *outfile);
 
 
 #endif  // _HANDLERS_H

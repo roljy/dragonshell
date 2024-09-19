@@ -9,7 +9,8 @@
 #include <unistd.h>     // chdir, getcwd, _exit, fork, execve
 #include <signal.h>     // kill
 #include <sys/types.h>  // pid_t
-#include <sys/wait.h>   // wait
+#include <sys/wait.h>   // waitpid
+#include <fcntl.h>      // open
 
 // user includes
 #include "constants.h"
@@ -17,6 +18,7 @@
 #include "handlers.h"
 
 // global vars
+int bg_proc_exists = 0;
 int child_pid;
 
 
@@ -49,42 +51,43 @@ void print_working_dir()
 
 /**
  * @brief Exit the shell gracefully.
- *        All background processes must be terminated via SIGTERM.
+ *        All background processes are terminated via SIGTERM.
  */
 void exit_shell()
 {
-    // TODO implement using kill and _exit syscalls
-    exit(0);
+    if (bg_proc_exists)
+    {
+        // TODO kill children
+    }
+    _exit(0);
 }
 
 
 /**
  * @brief Execute an external program as its own process.
- *        If argv ends with "&", send it to background,
- *        otherwise wait for it to finish before returning control to shell.
  * 
  * @param argc Number of command-line arguments
  * @param argv Array of strings containing args (start with program filepath)
+ * @param is_bg_proc True if process should run in background, False otherwise
+ * @param infile Filepath of input file, or NULL for stdin
+ * @param outfile Filepath of output file, or NULL for stdout
  */
-void exec_external_cmd(int argc, char **argv)
+void exec_external_cmd(int argc,
+                       char **argv,
+                       int is_bg_proc,
+                       char *infile,
+                       char *outfile)
 {
     if (argc <= 0)
         perror("Not enough arguments for exec");
-
-    int is_bg_proc = (argc >= 2 && strcmp(argv[argc-1], "&") == 0);
 
     pid_t pid = fork();  // create child
     if (pid == 0)
     {
         // child continues here
         char *envp[1] = { NULL };
-        // argv[0] will be ignored when passing args so can pass argv directly,
-        // but may need to set the final "&" to a NULL if it exists
-        if (is_bg_proc)
-        {
-            argv[argc-1] = NULL;
-            // TODO redirect output to devnull using dup2
-        }
+        // TODO redirect bg process output to devnull using dup2
+        // argv[0] will be ignored when passing args so can pass argv directly
         execve(argv[0], argv, envp);
         // execve returning means it failed. assume unknown command
         log_error_msg(EC_UNKNOWN_CMD);
@@ -97,6 +100,7 @@ void exec_external_cmd(int argc, char **argv)
         {
             // TODO make a list of children, to support >1 bg process
             // would need to capture SIGCHLD and remove child from list
+            bg_proc_exists = 1;
             child_pid = pid;
             printf("PID %d is sent to background\n", child_pid);
         }
