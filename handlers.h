@@ -35,8 +35,9 @@ void exit_shell();
 
 
 /**
- * @brief Execute an external program as its own process and wait for it
- *        to finish before returning control to shell.
+ * @brief Execute an external program as its own process.
+ *        If argv ends with "&", send it to background,
+ *        otherwise wait for it to finish before returning control to shell.
  * 
  * @param argc Number of command-line arguments
  * @param argv Array of strings containing args (start with program filepath)
