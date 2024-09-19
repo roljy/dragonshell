@@ -1,9 +1,11 @@
 // handlers.c
 // Tawfeeq Mannan
 
+#define _POSIX_SOURCE   // needed for kill() to be declared
 #include <stdio.h>      // printf
 #include <stdlib.h>     // free
 #include <unistd.h>     // chdir, getcwd, _exit, fork, execve
+#include <signal.h>     // kill
 #include <sys/types.h>  // pid_t
 #include <sys/wait.h>   // wait
 
@@ -36,6 +38,17 @@ void print_working_dir()
     printf("%s\n", wd);
     // since getcwd used malloc to allocate for wd, must free manually
     free(wd);
+}
+
+
+/**
+ * @brief Exit the shell gracefully.
+ *        All background processes must be terminated via SIGTERM.
+ */
+void exit_shell()
+{
+    // TODO implement using kill and _exit syscalls
+    exit(0);
 }
 
 

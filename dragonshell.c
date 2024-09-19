@@ -2,7 +2,7 @@
 // Tawfeeq Mannan
 
 // C includes
-#include <string.h>     // strcmp
+#include <string.h>     // strcmp, memset
 #include <stdio.h>      // printf
 #include <stdbool.h>    // true/false
 
@@ -10,9 +10,6 @@
 #include "constants.h"
 #include "shellio.h"
 #include "handlers.h"
-
-// global vars
-bool keep_shell_alive = true;
 
 
 /**
@@ -41,8 +38,7 @@ void handle_request(int argc, char **argv)
 
     else if (strcmp(argv[0], "exit") == 0)
     {
-        // TODO gracefully exit
-        keep_shell_alive = false;
+        exit_shell();
     }
 
     else  // assume external command
@@ -62,22 +58,28 @@ void handle_request(int argc, char **argv)
  */
 int main(int argc, char *argv[])
 {
+    char buffer[LINE_LENGTH];
+    char *tokens[MAX_ARGS * 3];  // x3 for safety
+    size_t token_cnt;
+
     // display welcome message at start
     printf("Welcome to Dragon Shell!\n\n");
 
-    while (keep_shell_alive)
+    while (1)
     {
+        // wipe the buffer and arguments
+        memset(buffer, 0, sizeof(buffer));
+        memset(tokens, 0, sizeof(tokens));
+
         // get a command from the user
-        char buffer[LINE_LENGTH];
         display_prompt(buffer);
 
         // split the user-provided command into tokens for parsing
-        char *args[MAX_ARGS * 3] = { NULL };  // x3 for safety
-        size_t args_cnt = tokenize(buffer, " ", args);
+        token_cnt = tokenize(buffer, " ", tokens);
 
         // handle the arguments accordingly
-        handle_request(args_cnt, args);
+        handle_request(token_cnt, tokens);
     }
 
-    return 0;
+    return 1;  // should never be here, exit is handled by exit_shell()
 }

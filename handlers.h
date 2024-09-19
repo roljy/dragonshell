@@ -29,6 +29,12 @@ void print_working_dir();
 
 
 /**
+ * @brief Exit the shell gracefully
+ */
+void exit_shell();
+
+
+/**
  * @brief Execute an external program as its own process and wait for it
  *        to finish before returning control to shell.
  * 
