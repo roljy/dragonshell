@@ -232,17 +232,25 @@ void child_exec_cmd(char **argv,
                     int output_fd)
 {
     char *envp[1] = { NULL };
-    // redirect output to output file. no-op if outfile == stdout
-    if (dup2(output_fd, STDOUT_FILENO) == -1)
-        perror("dup2() failed (output redirect)");
+
     // redirect input to come from input file. no-op if infile == stdin
     if (dup2(input_fd, STDIN_FILENO) == -1)
         perror("dup2() failed (input redirect)");
+    else if (input_fd != STDIN_FILENO)
+        close(input_fd);  // stdin points to the input file now
+
+    // redirect output to output file. no-op if outfile == stdout
+    if (dup2(output_fd, STDOUT_FILENO) == -1)
+        perror("dup2() failed (output redirect)");
+    else if (output_fd != STDOUT_FILENO)
+        close(output_fd);  // stdout points to the output file now
+
     // redirect bg process output to devnull so it gets hidden
     if (is_bg_proc)
     {
         // TODO redirect bg process output to devnull using dup2
     }
+
     // argv[0] will be ignored when passing args so can pass argv directly
     execve(argv[0], argv, envp);
     // execve returning means it failed. assume unknown command
@@ -274,11 +282,13 @@ void parent_cleanup_after_exec(pid_t pid,
         child_pid = pid;
         printf("PID %d is sent to background\n", child_pid);
     }
+
     else
     {
         // wait for child to finish. use waitpid instead of wait in case a
         // bg process coincidentally finishes before the fg process
         waitpid(pid, NULL, 0);
+
         // since child is done now, we can close in/out files if necessary
         if (input_fd != STDIN_FILENO)
         {
