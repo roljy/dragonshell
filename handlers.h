@@ -8,6 +8,7 @@
 /**
  * @brief Central master function to handle all requests,
  *        delegating to subroutines as necessary.
+ * 
  * @param argc Number of input arguments (tokens)
  * @param argv char* array containing input arguments
  */
@@ -40,14 +41,14 @@ void exit_shell();
  * @param argc Number of command-line arguments
  * @param argv Array of strings containing args (start with program filepath)
  * @param is_bg_proc True if process should run in background, False otherwise
- * @param infile Filepath of input file, or NULL for stdin
- * @param outfile Filepath of output file, or NULL for stdout
+ * @param input_fd File descriptor of input file
+ * @param output_fd File descriptor of output file
  */
 void exec_external_cmd(int argc,
                        char **argv,
                        int is_bg_proc,
-                       char *infile,
-                       char *outfile);
+                       int input_fd,
+                       int output_fd);
 
 
 #endif  // _HANDLERS_H
