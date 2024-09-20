@@ -57,6 +57,8 @@ void handle_request(int argc, char **argv)
         int is_bg_proc = (argc >= 2 && strcmp(argv[argc-1], "&") == 0);
         char *infile, *outfile;
         int infile_fd = STDIN_FILENO, outfile_fd = STDOUT_FILENO;
+        int pipe_ends[2];
+        char **argv2 = argv;
 
         // iterate thru all "possibly sandwiched" args to look for in/out/pipe
         for (int i = 1; i < argc-1; i++)
@@ -87,7 +89,18 @@ void handle_request(int argc, char **argv)
             }
             else if (strcmp(argv[i], "|") == 0)
             {
-                // TODO handle pipe
+                // everything after this arg is the second command
+                argv2 = argv + i + 1;
+                if (pipe(pipe_ends) == -1)
+                {
+                    perror("pipe() failed");
+                }
+                else
+                {
+                    infile_fd = pipe_ends[0];
+                    outfile_fd = pipe_ends[1];
+                }
+                argv[i] = NULL;  // cut off the command args for LHS
             }
         }
 
@@ -97,7 +110,19 @@ void handle_request(int argc, char **argv)
             argv[--argc] = NULL;
         }
 
-        exec_external_cmd(argc, argv, is_bg_proc, infile_fd, outfile_fd);
+        if (argv2 == argv)
+        {
+            // no pipe. use infile and outfile for the same command
+            exec_external_cmd(argc, argv, is_bg_proc, infile_fd, outfile_fd);
+        }
+        else
+        {
+            // piping output of cmd1 to cmd2. can hardcode is_bg_proc = false
+            // can run in series since kernel will buffer pipe contents
+            // TODO run these in parallel so cmd2 receives input in real time
+            exec_external_cmd(argc, argv, 0, STDIN_FILENO, outfile_fd);
+            exec_external_cmd(argc, argv2, 0, infile_fd, STDOUT_FILENO);
+        }
     }
 }
 
