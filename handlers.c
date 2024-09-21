@@ -95,8 +95,13 @@ void exit_shell()
 {
     if (bg_proc_exists)
     {
-        // TODO kill children
+        if (kill(child_pid, SIGTERM) == -1)
+            perror("kill() failed (terminating children)");
+        // wait for the child to actually terminate before continuing
+        else if (waitpid(child_pid, NULL, 0) == -1)
+            perror("waitpid() failed (waiting for child to die)");
     }
+    // TODO compute child execution times
     _exit(0);
 }
 
@@ -221,6 +226,9 @@ void exec_program(int argc,
 /**
  * @brief Launch a program in a child process.
  * 
+ * ! WARNING: Because it invokes execve(), this function never returns, and the
+ * ! caller process will DIE after calling this, regardless of success/failure.
+ * 
  * @param argv Null-terminated array of strings containing command & all args
  * @param is_bg_proc True if process should run in background, False otherwise
  * @param input_fd File descriptor of input file
@@ -248,7 +256,18 @@ void child_exec_cmd(char **argv,
     // redirect bg process output to devnull so it gets hidden
     if (is_bg_proc)
     {
-        // TODO redirect bg process output to devnull using dup2
+        int devnull_fd = open("/dev/null", O_WRONLY);
+        if (devnull_fd == -1)
+            perror("open() failed (opening /dev/null)");
+        // only redirect if it would have otherwise printed to stdout
+        // no need to redirect if it's already going to a file
+        if (output_fd == STDOUT_FILENO)
+        {
+            if (dup2(devnull_fd, STDOUT_FILENO) == -1)
+                perror("dup2() failed (output redirect)");
+            else if (devnull_fd != STDOUT_FILENO)
+                close(devnull_fd);  // stdout points to /dev/null now
+        }
     }
 
     // argv[0] will be ignored when passing args so can pass argv directly

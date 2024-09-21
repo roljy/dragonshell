@@ -65,6 +65,9 @@ void exec_program(int argc,
 /**
  * @brief Launch a program in a child process.
  * 
+ * ! WARNING: Because it invokes execve(), this function never returns, and the
+ * ! caller process will DIE after calling this, regardless of success/failure.
+ * 
  * @param argv Null-terminated array of strings containing command & all args
  * @param is_bg_proc True if process should run in background, False otherwise
  * @param input_fd File descriptor of input file
