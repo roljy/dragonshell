@@ -8,6 +8,15 @@
 
 
 /**
+ * @brief Assign a function to handle a signal interrupt
+ * 
+ * @param signum Signal number (eg. SIGINT)
+ * @param handler Function pointer to call for this signal, or SIG_IGN, etc.
+ */
+void assign_sighandler(int signum, void (*handler)(int));
+
+
+/**
  * @brief Central master function to handle all requests,
  *        delegating to subroutines as necessary.
  * 

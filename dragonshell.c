@@ -4,6 +4,7 @@
 // C includes
 #include <string.h>     // memset
 #include <stdio.h>      // printf
+#include <signal.h>     // SIGINT, SIGTSTP, SIG_IGN
 
 // user includes
 #include "constants.h"
@@ -27,6 +28,11 @@ int main(int argc, char *argv[])
 
     // display welcome message at start
     printf("Welcome to Dragon Shell!\n\n");
+
+    // override signals for ctrl-C and ctrl-Z.
+    // these will return back to default for any child calling execve
+    assign_sighandler(SIGINT, SIG_IGN);
+    assign_sighandler(SIGTSTP, SIG_IGN);
 
     while (1)
     {

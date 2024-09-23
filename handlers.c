@@ -8,7 +8,7 @@
 #include <stdlib.h>     // free
 #include <unistd.h>     // chdir, getcwd, _exit, fork, execve, close,
                         //  dup2, pipe
-#include <signal.h>     // kill
+#include <signal.h>     // kill, sigaction
 #include <sys/types.h>  // pid_t
 #include <sys/wait.h>   // waitpid
 #include <fcntl.h>      // open
@@ -20,7 +20,23 @@
 
 // global vars
 int bg_proc_exists = 0;
-int child_pid;
+int bg_child_pid;
+
+
+/**
+ * @brief Assign a function to handle a signal interrupt
+ * 
+ * @param signum Signal number (eg. SIGINT)
+ * @param handler Function pointer to call for this signal, or SIG_IGN, etc.
+ */
+void assign_sighandler(int signum, void (*handler)(int))
+{
+    struct sigaction sa;
+    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_handler = (*handler);
+    sigaction(signum, &sa, NULL);  // don't care about old behaviour
+}
 
 
 /**
@@ -95,10 +111,10 @@ void exit_shell()
 {
     if (bg_proc_exists)
     {
-        if (kill(child_pid, SIGTERM) == -1)
+        if (kill(bg_child_pid, SIGTERM) == -1)
             perror("kill() failed (terminating children)");
         // wait for the child to actually terminate before continuing
-        else if (waitpid(child_pid, NULL, 0) == -1)
+        else if (waitpid(bg_child_pid, NULL, 0) == -1)
             perror("waitpid() failed (waiting for child to die)");
     }
     // TODO compute child execution times
@@ -298,8 +314,8 @@ void parent_cleanup_after_exec(pid_t pid,
         // TODO make a list of children, to support >1 bg process
         // would need to capture SIGCHLD and remove child from list
         bg_proc_exists = 1;
-        child_pid = pid;
-        printf("PID %d is sent to background\n", child_pid);
+        bg_child_pid = pid;
+        printf("PID %d is sent to background\n", bg_child_pid);
     }
 
     else
