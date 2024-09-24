@@ -29,8 +29,7 @@ int main(int argc, char *argv[])
     // display welcome message at start
     printf("Welcome to Dragon Shell!\n\n");
 
-    // override signals for ctrl-C and ctrl-Z.
-    // these will return back to default for any child calling execve
+    // override signals for ctrl-C and ctrl-Z
     assign_sighandler(SIGINT, SIG_IGN);
     assign_sighandler(SIGTSTP, SIG_IGN);
 
