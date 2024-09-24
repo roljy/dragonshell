@@ -9,6 +9,8 @@
 #include <unistd.h>     // chdir, getcwd, _exit
 #include <signal.h>     // kill, sigaction
 #include <sys/wait.h>   // waitpid
+#include <sys/time.h>   // timeval
+#include <sys/resource.h>   // getrusage
 
 // user includes
 #include "constants.h"
@@ -33,7 +35,8 @@ void assign_sighandler(int signum, void (*handler)(int))
     sa.sa_flags = 0;
     sigemptyset(&sa.sa_mask);
     sa.sa_handler = (*handler);
-    sigaction(signum, &sa, NULL);  // don't care about old behaviour
+    if (sigaction(signum, &sa, NULL) == -1)  // don't care about old behaviour
+        perror("sigaction() failed");
 }
 
 
@@ -107,6 +110,7 @@ void print_working_dir()
  */
 void exit_shell()
 {
+    // terminate any currently running bg processes
     if (bg_proc_exists)
     {
         if (kill(bg_child_pid, SIGTERM) == -1)
@@ -115,6 +119,19 @@ void exit_shell()
         else if (waitpid(bg_child_pid, NULL, 0) == -1)
             perror("waitpid() failed (waiting for child to die)");
     }
-    // TODO compute child execution times
+    
+    // collect and display the child execution times
+    struct rusage ru;
+    if (getrusage(RUSAGE_CHILDREN, &ru) == -1)
+    {
+        perror("getrusage() failed");
+    }
+    else
+    {
+        // rusage::ru_utime of type timeval --> timeval::tv_sec of type int
+        printf("User time: %ld seconds\n", ru.ru_utime.tv_sec);
+        printf("Sys time: %ld seconds\n", ru.ru_stime.tv_sec);
+    }
+
     _exit(0);
 }
