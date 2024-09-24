@@ -1,8 +1,8 @@
-// handlers.h
+// internals.h
 // Tawfeeq Mannan
 
-#ifndef _HANDLERS_H
-#define _HANDLERS_H
+#ifndef _INTERNALS_H
+#define _INTERNALS_H
 
 #include <sys/types.h>      // pid_t
 
@@ -46,4 +46,4 @@ void print_working_dir();
 void exit_shell();
 
 
-#endif  // _HANDLERS_H
+#endif  // _INTERNALS_H
