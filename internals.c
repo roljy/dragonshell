@@ -19,8 +19,8 @@
 #include "externals.h"
 
 // global vars
-extern int bg_proc_exists;  // defined in externals.c
-extern int bg_child_pid;
+extern int num_bg_proc;  // defined in externals.c
+extern int bg_pids[];
 
 
 /**
@@ -111,12 +111,12 @@ void print_working_dir()
 void exit_shell()
 {
     // terminate any currently running bg processes
-    if (bg_proc_exists)
+    for (int i = 0; i < num_bg_proc; i++)
     {
-        if (kill(bg_child_pid, SIGTERM) == -1)
+        if (kill(bg_pids[i], SIGTERM) == -1)
             perror("kill() failed (terminating children)");
         // wait for the child to actually terminate before continuing
-        else if (waitpid(bg_child_pid, NULL, 0) == -1)
+        else if (waitpid(bg_pids[i], NULL, 0) == -1)
             perror("waitpid() failed (waiting for child to die)");
     }
     

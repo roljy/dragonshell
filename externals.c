@@ -17,8 +17,8 @@
 #include "externals.h"
 
 // global vars
-int bg_proc_exists = 0;
-int bg_child_pid;
+int num_bg_proc = 0;
+int bg_pids[MAX_BG_PROC * 3];
 
 
 /**
@@ -197,11 +197,9 @@ void parent_cleanup_after_exec(pid_t pid,
 {
     if (is_bg_proc)
     {
-        // TODO make a list of children, to support >1 bg process
-        // would need to capture SIGCHLD and remove child from list
-        bg_proc_exists = 1;
-        bg_child_pid = pid;
-        printf("PID %d is sent to background\n", bg_child_pid);
+        // TODO capture SIGCHLD to remove zombies from list
+        bg_pids[num_bg_proc++] = pid;
+        printf("PID %d is sent to background\n", pid);
     }
 
     else
