@@ -33,7 +33,7 @@ void parse_external_request(int argc, char **argv)
     char *infile, *outfile;
     int infile_fd = STDIN_FILENO, outfile_fd = STDOUT_FILENO;
     int pipe_ends[2];
-    char **argv2 = argv;
+    char **argv2 = NULL;
 
     // iterate thru all "possibly sandwiched" args to look for in/out/pipe
     for (int i = 1; i < argc-1; i++)
@@ -85,7 +85,7 @@ void parse_external_request(int argc, char **argv)
         argv[--argc] = NULL;
     }
 
-    if (argv2 == argv)
+    if (argv2 == NULL)
     {
         // no pipe. use infile and outfile for the same command
         exec_program(argc, argv, is_bg_proc, infile_fd, outfile_fd);
@@ -170,22 +170,7 @@ void child_exec_cmd(char **argv,
     else if (output_fd != STDOUT_FILENO)
         close(output_fd);  // stdout points to the output file now
 
-    // redirect bg process output to devnull so it gets hidden
-    if (is_bg_proc)
-    {
-        int devnull_fd = open("/dev/null", O_WRONLY);
-        if (devnull_fd == -1)
-            perror("open() failed (opening /dev/null)");
-        // only redirect if it would have otherwise printed to stdout
-        // no need to redirect if it's already going to a file
-        if (output_fd == STDOUT_FILENO)
-        {
-            if (dup2(devnull_fd, STDOUT_FILENO) == -1)
-                perror("dup2() failed (output redirect)");
-            else if (devnull_fd != STDOUT_FILENO)
-                close(devnull_fd);  // stdout points to /dev/null now
-        }
-    }
+    // ! REMOVED: No longer need to redirect output to /dev/null
 
     // argv[0] will be ignored when passing args so can pass argv directly
     execve(argv[0], argv, envp);
