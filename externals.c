@@ -88,37 +88,34 @@ void parse_external_request(int argc, char **argv)
     if (argv2 == NULL)
     {
         // no pipe. use infile and outfile for the same command
-        exec_program(argc, argv, is_bg_proc, infile_fd, outfile_fd);
+        exec_program(argv, NULL, is_bg_proc, infile_fd, outfile_fd);
     }
     else
     {
         // piping output of cmd1 to cmd2. can hardcode is_bg_proc = false
         // can run in series since kernel will buffer pipe contents
         // TODO run these in parallel so cmd2 receives input in real time
-        exec_program(argc, argv, 0, STDIN_FILENO, outfile_fd);
-        exec_program(argc, argv2, 0, infile_fd, STDOUT_FILENO);
+        exec_program(argv, NULL, 0, STDIN_FILENO, outfile_fd);
+        exec_program(argv2, NULL, 0, infile_fd, STDOUT_FILENO);
     }
 }
 
 
 /**
- * @brief Execute an external program as its own process.
+ * @brief Execute an external program (or 2) as its own process.
  * 
- * @param argc Number of command-line arguments
  * @param argv Array of strings containing args (start with program filepath)
+ * @param argv Array of strings containing second command args
  * @param is_bg_proc True if process should run in background, False otherwise
  * @param input_fd File descriptor of input file
  * @param output_fd File descriptor of output file
  */
-void exec_program(int argc,
-                  char **argv,
+void exec_program(char **argv,
+                  char **argv2,
                   int is_bg_proc,
                   int input_fd,
                   int output_fd)
 {
-    if (argc <= 0)
-        perror("Not enough arguments for exec");
-
     pid_t pid = fork();  // create child
     if (pid == 0)
     {
@@ -126,11 +123,12 @@ void exec_program(int argc,
         assign_sighandler(SIGINT, SIG_DFL);
         assign_sighandler(SIGTSTP, SIG_DFL);
         child_exec_cmd(argv, is_bg_proc, input_fd, output_fd);
+        // child_exec_cmd() never returns so child is done now
     }
     else if (pid > 0)
     {
         // parent continues here
-        parent_cleanup_after_exec(pid, is_bg_proc, input_fd, output_fd);
+        parent_wait_to_close(pid, is_bg_proc, input_fd, output_fd);
     }
     else
     {
@@ -190,10 +188,10 @@ void child_exec_cmd(char **argv,
  * @param input_fd File descriptor of input file
  * @param output_fd File descriptor of output file
  */
-void parent_cleanup_after_exec(pid_t pid,
-                               int is_bg_proc,
-                               int input_fd,
-                               int output_fd)
+void parent_wait_to_close(pid_t pid,
+                          int is_bg_proc,
+                          int input_fd,
+                          int output_fd)
 {
     if (is_bg_proc)
     {

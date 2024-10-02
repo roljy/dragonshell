@@ -17,16 +17,16 @@ void parse_external_request(int argc, char **argv);
 
 
 /**
- * @brief Execute an external program as its own process.
+ * @brief Execute an external program (or 2) as its own process.
  * 
- * @param argc Number of command-line arguments
  * @param argv Array of strings containing args (start with program filepath)
+ * @param argv Array of strings containing second command args
  * @param is_bg_proc True if process should run in background, False otherwise
  * @param input_fd File descriptor of input file
  * @param output_fd File descriptor of output file
  */
-void exec_program(int argc,
-                  char **argv,
+void exec_program(char **argv,
+                  char **argv2,
                   int is_bg_proc,
                   int input_fd,
                   int output_fd);
@@ -58,10 +58,10 @@ void child_exec_cmd(char **argv,
  * @param input_fd File descriptor of input file
  * @param output_fd File descriptor of output file
  */
-void parent_cleanup_after_exec(pid_t pid,
-                               int is_bg_proc,
-                               int input_fd,
-                               int output_fd);
+void parent_wait_to_close(pid_t pid,
+                          int is_bg_proc,
+                          int input_fd,
+                          int output_fd);
 
 
 #endif  // _EXTERNALS_H
