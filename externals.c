@@ -95,8 +95,7 @@ void parse_external_request(int argc, char **argv)
         // piping output of cmd1 to cmd2. can hardcode is_bg_proc = false
         // can run in series since kernel will buffer pipe contents
         // TODO run these in parallel so cmd2 receives input in real time
-        exec_program(argv, NULL, 0, STDIN_FILENO, outfile_fd);
-        exec_program(argv2, NULL, 0, infile_fd, STDOUT_FILENO);
+        exec_program(argv, argv2, 0, infile_fd, outfile_fd);
     }
 }
 
@@ -125,16 +124,14 @@ void exec_program(char **argv,
         child_exec_cmd(argv, is_bg_proc, input_fd, output_fd);
         // child_exec_cmd() never returns so child is done now
     }
-    else if (pid > 0)
+    else if (pid < 0)
     {
-        // parent continues here
-        parent_wait_to_close(pid, is_bg_proc, input_fd, output_fd);
-    }
-    else
-    {
-        // pid < 0
         perror("fork() failed");
+        return;
     }
+
+    // parent continues here
+    parent_wait_to_close(pid, is_bg_proc, input_fd, output_fd);
 }
 
 
