@@ -231,18 +231,13 @@ void parent_wait_to_close(pid_t pid,
     {
         // wait for child to finish. use waitpid instead of wait in case a
         // bg process coincidentally finishes before the fg process
-        waitpid(pid, NULL, 0);
+        if (waitpid(pid, NULL, 0) == -1)
+            perror("waitpid() failed");
 
         // since child is done now, we can close in/out files if necessary
-        if (input_fd != STDIN_FILENO)
-        {
-            if (close(input_fd) == -1)
-                perror("close() failed (input file)");
-        }
-        if (output_fd != STDOUT_FILENO)
-        {
-            if (close(output_fd) == -1)
-                perror("close() failed (output file)");
-        }
+        if (input_fd != STDIN_FILENO && close(input_fd) == -1)
+            perror("close() failed (input file)");
+        if (output_fd != STDOUT_FILENO && close(output_fd) == -1)
+            perror("close() failed (output file)");
     }
 }
