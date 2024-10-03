@@ -85,18 +85,9 @@ void parse_external_request(int argc, char **argv)
         argv[--argc] = NULL;
     }
 
-    if (argv2 == NULL)
-    {
-        // no pipe. use infile and outfile for the same command
-        exec_program(argv, NULL, is_bg_proc, infile_fd, outfile_fd);
-    }
-    else
-    {
-        // piping output of cmd1 to cmd2. can hardcode is_bg_proc = false
-        // can run in series since kernel will buffer pipe contents
-        // TODO run these in parallel so cmd2 receives input in real time
-        exec_program(argv, argv2, 0, infile_fd, outfile_fd);
-    }
+    // can pass same args regardless of pipe or not,
+    // exec_program will decide how to handle fds accordingly based on argv2
+    exec_program(argv, argv2, is_bg_proc, infile_fd, outfile_fd);
 }
 
 
@@ -115,23 +106,62 @@ void exec_program(char **argv,
                   int input_fd,
                   int output_fd)
 {
-    pid_t pid = fork();  // create child
-    if (pid == 0)
+    int is_pipe_case = (argv2 != NULL);
+    pid_t cpid1, cpid2;
+
+    cpid1 = fork();  // create child
+    if (cpid1 == 0)
     {
         // child continues here
         assign_sighandler(SIGINT, SIG_DFL);
         assign_sighandler(SIGTSTP, SIG_DFL);
+        if (is_pipe_case)
+        {
+            if (input_fd != STDIN_FILENO && close(input_fd) == -1)
+                perror("close() failed");
+            input_fd = STDIN_FILENO;
+        }
         child_exec_cmd(argv, is_bg_proc, input_fd, output_fd);
         // child_exec_cmd() never returns so child is done now
     }
-    else if (pid < 0)
+    else if (cpid1 < 0)
     {
         perror("fork() failed");
         return;
     }
 
-    // parent continues here
-    parent_wait_to_close(pid, is_bg_proc, input_fd, output_fd);
+    // parent continues here.
+    // should create another child for RHS if piping, otherwise skip to waiting
+    if (is_pipe_case)
+    {
+        cpid2 = fork();
+        if (cpid2 == 0)
+        {
+            // child2 continues here for RHS cmd
+            assign_sighandler(SIGINT, SIG_DFL);
+            assign_sighandler(SIGTSTP, SIG_DFL);
+            if (output_fd != STDOUT_FILENO && close(output_fd) == -1)
+                perror("close() failed");
+            output_fd = STDOUT_FILENO;
+            child_exec_cmd(argv2, is_bg_proc, input_fd, output_fd);
+            // child_exec_cmd() never returns so child2 is done now
+        }
+        else if (cpid1 < 0)
+        {
+            perror("fork() failed");
+            return;
+        }
+
+        // parent continues here in the pipe case
+        // need to split close since we can't re-close the same fd twice
+        parent_wait_to_close(cpid1, is_bg_proc, STDIN_FILENO, output_fd);
+        parent_wait_to_close(cpid2, is_bg_proc, input_fd, STDOUT_FILENO);
+    }
+
+    else  // parent continues here in non-pipe case
+    {
+        parent_wait_to_close(cpid1, is_bg_proc, input_fd, output_fd);
+    }
 }
 
 
