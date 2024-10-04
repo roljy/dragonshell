@@ -5,6 +5,13 @@ It was written to directly invoke system calls for process management and
 interprocess communication, reducing overhead when interfacing with the OS.
 
 
+## How to Run
+
+`make dragonshell`. Optionally can run `make compile` first.
+
+For memory leak checking, `make valgrind` will run a debug build in valgrind.
+
+
 ## Design
 
 The design philosophy for dragonshell was to write C code that prioritized
@@ -45,9 +52,9 @@ Commands for external programs
     * `parse_external_request()`
         * `exec_program()`
             * **fork(2)**
-            * `assign_sighandler()`
-                * **sigaction(2)** setting the handler to **SIG_DFL**
             * `child_exec_cmd()`
+                * `assign_sighandler()`
+                    * **sigaction(2)** setting the handler to **SIG_DFL**
                 * **execve(2)**
                 * **_exit(2)**
             * `parent_wait_to_close()`
@@ -70,3 +77,34 @@ Commands for external programs
 
 
 ## Testing
+
+The built-in commands *cd* and *pwd* were tested against each other, navigating
+to different directories using both relative and absolute paths. Once external
+command execution worked as well, `/bin/ls` was used to validate that *cd*
+was actually setting the working directory as expected.
+
+External command execution was tested by creating a test script. Source code
+is available in test/test.c, can be built by running `make test` from the
+project root directory, and run using `test/test [args]`, where `args` is
+either `input` or `auto <sleep_time>`. Executing this program and watching
+its results hereby validated *launching programs*; *redirecting IO*
+(providing an input file when running with the `input` argument and/or
+writing output to a new or existing file); and *piping output* to input (by
+piping `test/test`'s output to `/bin/tee somefile.txt`).
+
+This test script was also used to test *background execution*, both with output
+redirection and without. The state of the background process was monitored
+in a separate terminal using `ps aux`. This was also how it was verified that
+*handling signals* was correctly implmented, since ctrl-C/ctrl-Z would not kill
+the shell but would terminate the running background processes, as expected.
+
+Lastly, the graceful *exit* behaviour was validated by running
+`/usr/bin/python3`, both in the fore- and background, providing it a script
+that would run a for loop to sum and print the first 10 million integers.
+This takes a noticeable amount of time, so the running time was measured and
+found to match the times reported after *exit*. Again, `ps aux` was used to
+ensure the processes were correctly cleaned up before the shell exited.
+
+These same tests were also run in valgrind to ensure no memory leaks. The only
+different behaviour was that C-z does not get captured. This is due to valgrind
+itself not capturing the signal, not a deficiency with Dragonshell.

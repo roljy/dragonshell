@@ -113,8 +113,6 @@ void exec_program(char **argv,
     if (cpid1 == 0)
     {
         // child continues here
-        assign_sighandler(SIGINT, SIG_DFL);
-        assign_sighandler(SIGTSTP, SIG_DFL);
         if (is_pipe_case)
         {
             if (input_fd != STDIN_FILENO && close(input_fd) == -1)
@@ -138,8 +136,6 @@ void exec_program(char **argv,
         if (cpid2 == 0)
         {
             // child2 continues here for RHS cmd
-            assign_sighandler(SIGINT, SIG_DFL);
-            assign_sighandler(SIGTSTP, SIG_DFL);
             if (output_fd != STDOUT_FILENO && close(output_fd) == -1)
                 perror("close() failed");
             output_fd = STDOUT_FILENO;
@@ -182,6 +178,8 @@ void child_exec_cmd(char **argv,
                     int output_fd)
 {
     char *envp[1] = { NULL };
+    assign_sighandler(SIGINT, SIG_DFL);
+    assign_sighandler(SIGTSTP, SIG_DFL);
 
     // redirect input to come from input file. no-op if infile == stdin
     if (dup2(input_fd, STDIN_FILENO) == -1)
