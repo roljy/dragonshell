@@ -229,7 +229,7 @@ void parent_wait_to_close(pid_t pid,
     {
         // wait for child to finish. use waitpid instead of wait in case a
         // bg process coincidentally finishes before the fg process
-        if (waitpid(pid, NULL, 0) == -1)
+        if (waitpid(pid, NULL, WUNTRACED) == -1)
             perror("waitpid() failed");
 
         // since child is done now, we can close in/out files if necessary
