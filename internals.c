@@ -113,6 +113,10 @@ void exit_shell()
     // terminate any currently running bg processes
     for (int i = 0; i < num_bg_proc; i++)
     {
+        // in case it's stopped, need to wake up
+        if (kill(bg_pids[i], SIGCONT) == -1)
+            perror("kill() failed (waking up)");
+        // terminate the process gracefully
         if (kill(bg_pids[i], SIGTERM) == -1)
             perror("kill() failed (terminating children)");
         // wait for the child to actually terminate before continuing

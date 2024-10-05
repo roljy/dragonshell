@@ -2,11 +2,12 @@
 // Tawfeeq Mannan
 
 // C includes
+#define _POSIX_SOURCE   // needed for kill()
 #include <string.h>     // strcmp
 #include <stdio.h>      // printf
 #include <unistd.h>     // fork, execve, close, dup2, pipe
 #include <sys/types.h>  // pid_t
-#include <signal.h>     // SIGINT, SIGTSTP, SIG_DFL
+#include <signal.h>     // SIGINT, SIGTSTP, SIG_DFL, kill
 #include <sys/wait.h>   // waitpid
 #include <fcntl.h>      // open
 
@@ -18,7 +19,7 @@
 
 // global vars
 int num_bg_proc = 0;
-int bg_pids[MAX_BG_PROC * 3];
+int bg_pids[MAX_BG_PROC * 10];
 
 
 /**
@@ -178,8 +179,11 @@ void child_exec_cmd(char **argv,
                     int output_fd)
 {
     char *envp[1] = { NULL };
-    assign_sighandler(SIGINT, SIG_DFL);
-    assign_sighandler(SIGTSTP, SIG_DFL);
+    if (!is_bg_proc)
+    {
+        assign_sighandler(SIGINT, SIG_DFL);
+        assign_sighandler(SIGTSTP, SIG_DFL);
+    }
 
     // redirect input to come from input file. no-op if infile == stdin
     if (dup2(input_fd, STDIN_FILENO) == -1)
@@ -220,7 +224,6 @@ void parent_wait_to_close(pid_t pid,
 {
     if (is_bg_proc)
     {
-        // TODO capture SIGCHLD to remove zombies from list
         bg_pids[num_bg_proc++] = pid;
         printf("PID %d is sent to background\n", pid);
     }
@@ -230,7 +233,15 @@ void parent_wait_to_close(pid_t pid,
         // wait for child to finish. use waitpid instead of wait in case a
         // bg process coincidentally finishes before the fg process
         if (waitpid(pid, NULL, WUNTRACED) == -1)
+        {
             perror("waitpid() failed");
+        }
+        else if (kill(pid, 0) == 0)
+        {
+            // the child still exists, probably get here thru SIGTSTP
+            // we need to remember to kill this child manually at exit
+            bg_pids[num_bg_proc++] = pid;
+        }
 
         // since child is done now, we can close in/out files if necessary
         if (input_fd != STDIN_FILENO && close(input_fd) == -1)
